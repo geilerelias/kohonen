@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html;charset=UTF-8" />
+    <link
+      href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900"
+      rel="stylesheet"
+    />
+    <link href="css/materialdesignicons.min.css" rel="stylesheet" />
+    <link href="css/vuetify.min.css" rel="stylesheet" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui"
+    />
+  </head>
+
+  <body>
+    <div id="app">
+      <template>
+  <v-app>
+    <v-navigation-drawer v-model="drawer" app clipped>
+      <v-list dense>
+        <v-list-item link @click="contentEntrenamiento = !contentEntrenamiento">
+          <v-list-item-action>
+            <v-icon>mdi-file-document-box-plus</v-icon>
+          </v-list-item-action>
+          <v-list-item-content>
+            <v-list-item-title>Entrada</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+        <v-list-item link @click="contentSimular= !contentSimular">
+          <v-list-item-action>
+            <v-icon>mdi-ab-testing</v-icon>
+          </v-list-item-action>
+          <v-list-item-content>
+            <v-list-item-title>Simulación</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+      </v-list>
+    </v-navigation-drawer>
+
+    <v-app-bar app clipped-left dark color="#70b620">
+      <v-app-bar-nav-icon @click.stop="drawer = !drawer"></v-app-bar-nav-icon>
+      <v-toolbar-title>Kohonen</v-toolbar-title>
+      <v-spacer></v-spacer>
+      <v-img src="./img/logo.png" lazy-src="./img/logo.png" aspect-ratio="2" class="grey lighten-2" max-width="100" max-height="60"></v-img>
+    </v-app-bar>
+
+    <v-content v-show="contentEntrenamiento">
+      <v-container fluid>
+        <!-- style="display: none;" -->
+
+        <v-card class="mx-auto">
+          <v-card-title class="title font-weight-regular justify-space-between">
+            <span>{{ currentTitle }}</span>
+            <v-avatar color="primary lighten-2" class="subheading white--text" size="24" v-text="step"></v-avatar>
+          </v-card-title>
+
+          <v-window v-model="step">
+            <v-window-item :value="1">
+              <v-card-text>
+                <v-file-input style="display: none;" id="inputFile" ref="inputFile" @change="changeFile" label="File input">
+                </v-file-input>
+                <v-hover v-slot:default="{ hover }">
+                  <v-card @click="openFile" ref="cardDropDrag" :color="hover?'grey lighten-2':'transparent'" :elevation="hover ? 8 : 1" class="mx-auto d-flex mdi my-4 text-center justify-center align-center" height="200" v-cloak @drop.prevent="addFile" @dragover.prevent>
+                    <v-row no-gutters>
+                      <v-col cols="12">
+                        <v-icon size="92">mdi-upload</v-icon>
+                      </v-col>
+                      <v-col cols="12">
+                        <h2>
+                          Haz click o arrastra para cargar datos de entradas
+                        </h2>
+                      </v-col>
+                    </v-row>
+                  </v-card>
+                </v-hover>
+                <v-list class="transparent" max-width="350" dense v-if="x.length>0">
+                  <v-list-item>
+                    <v-list-item-title>Numero de Entradas</v-list-item-title>
+
+                    <v-list-item-icon>
+                      <v-icon>mdi-equal</v-icon>
+                    </v-list-item-icon>
+
+                    <v-list-item-subtitle class="text-right">
+                      {{x[0].length}}
+                    </v-list-item-subtitle>
+                  </v-list-item>
+                  <v-list-item>
+                    <v-list-item-title>Numero de patrones</v-list-item-title>
+
+                    <v-list-item-icon>
+                      <v-icon>mdi-equal</v-icon>
+                    </v-list-item-icon>
+
+                    <v-list-item-subtitle class="text-right">
+                      {{x.length}}
+                    </v-list-item-subtitle>
+                  </v-list-item>
+
+                  <v-list-item @click="" v-for="(file,item) in files" :key=" item">
+                    <v-list-item-avatar class=" grey lighten-1 white--text">
+                      <v-icon>mdi-json</v-icon>
+                    </v-list-item-avatar>
+
+                    <v-list-item-content>
+                      <v-list-item-title>{{file.name}}</v-list-item-title>
+                      <v-list-item-subtitle>({{ file.size | kb}} kb)</v-list-item-subtitle>
+                    </v-list-item-content>
+
+                    <v-list-item-action>
+                      <v-btn class="mx-2" fab dark small color="error" @click="removeFile(file)" title="Remove">
+                        <v-icon>mdi-close</v-icon>
+                      </v-btn>
+                    </v-list-item-action>
+                  </v-list-item>
+                </v-list>
+
+                <v-divider></v-divider>
+                <v-data-table v-if="x.length>0" :headers="headers" :items="items" :items-per-page="5" class="elevation-5">
+                </v-data-table>
+              </v-card-text>
+            </v-window-item>
+
+            <v-window-item :value="2">
+              <v-card-text>
+                <v-form ref="form" v-model="valid" :lazy-validation="lazy">
+                  <v-row>
+                    <v-col>
+                      <v-text-field v-model.number="numeroIteraciones" type="number" label="Numero de Iteraciones" required>
+                      </v-text-field>
+                    </v-col>
+                    <v-col>
+                      <v-text-field v-model.number="numeroNeuronas" type="number" label="Numero de Neuronas" required>
+                      </v-text-field>
+                    </v-col>
+                    <v-col>
+                      <v-text-field v-model.number="coeficienteVecindad" type="number" label="Coeficiente Vecindad" required>
+                      </v-text-field>
+                    </v-col>
+                    <v-col>
+                      <v-text-field v-model.number="tolerancia" type="number" label="Tolerancia" required>
+                      </v-text-field>
+                    </v-col>
+                    <v-col>
+                      <v-text-field v-model.number="rata" type="number" label="Tasa" required>
+                      </v-text-field>
+                    </v-col>
+                    <v-col>
+                      <v-select v-model="select" :items="['Dura','Blanda']" label="Tipo de competencia" required>
+                      </v-select>
+                    </v-col>
+                  </v-row>
+                  <v-btn block color="info" @click="inicializarPesos()" dark>Inicializar pesos</v-btn>
+                </v-form>
+                <v-data-table v-if="itemsMatriz.length>0" :headers="headers" :items="itemsMatriz" class="elevation-1 mt-8">
+                </v-data-table>
+                <v-btn block color="info" @click="entrenar()" dark>Iniciar Entrenamiento</v-btn>
+              </v-card-text>
+
+            </v-window-item>
+
+            <v-window-item :value="3">
+              <v-container>
+                <v-select label="Estilo de gráfico" :items="options" v-model="modo" crearable=False></v-select>
+                <highcharts :options="chartOptions"></highcharts>
+              </v-container>
+            </v-window-item>
+          </v-window>
+
+          <v-divider></v-divider>
+
+          <v-card-actions>
+            <v-btn :disabled="step === 1" text @click="step--">
+              Back
+            </v-btn>
+            <v-spacer></v-spacer>
+            <v-btn :disabled="step === 3" color="primary" depressed @click="step++">
+              Next
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-container>
+
+    </v-content>
+
+    <v-content v-show="contentSimular">
+      <h1>simular</h1>
+    </v-content>
+
+    <v-footer app color="#289925" class="white--text">
+      <v-spacer></v-spacer>
+      <div>&copy; {{ new Date().getFullYear() }}</div>
+    </v-footer>
+  </v-app>
+</template>
+    </div>
+
+    <script src="js/vue.js"></script>
+    <script src="js/axios.min.js"></script>
+    <script src="js/vuetify.js"></script>
+    <script src="js/highcharts.js"></script>
+  	<script src="js/highcharts-vue.min.js"></script>
+    <script src="js/rna.js"></script>
+
+
+    <script>
+  Vue.config.productionTip = false;
+  Vue.config.devtools = false;
+  Vue.use(HighchartsVue.default);
+
+  Vue.filter("kb", val => {
+    return Math.floor(val / 1024);
+  });
+  new Vue({
+    el: "#app",
+    vuetify: new Vuetify({
+      icons: {
+        iconfont: "mdi" // default - only for display purposes
+      }
+    }),
+    props: {
+      source: String
+    },
+    data() {
+      return {
+        drawer: null,
+        files: [],
+        m: 0,
+        n: 0,
+        numeroPatrones: 0,
+        headers: [],
+        items: [],
+        x: [],
+        w: [],
+        itemsMatriz: [],
+        arrayVencedora: [],
+        arrayIte: [],
+        arrayTolerancia: [],
+        contentEntrenamiento: true,
+        contentSimular: false,
+        step: 1,
+        numeroNeuronas: 10,
+        numeroIteraciones: 100,
+        coeficienteVecindad: 0.05,
+        tolerancia: 0.05,
+        rata: 0.005,
+        tipoCompetencia: "",
+        valid: true,
+        name: "",
+        nameRules: [v => !!v || "el numero de Neuronas es requerido"],
+        email: "",
+        emailRules: [
+          v => !!v || "E-mail is required",
+          v => /.+@.+\..+/.test(v) || "E-mail must be valid"
+        ],
+        select: null,
+        checkbox: false,
+        lazy: false,
+
+        title: '',
+        options: ['spline', 'line', 'bar', 'pie'],
+        modo: 'spline',
+        series: [
+          {
+            data: [15, 3, 6, 2, 6, 4, 5, 5]
+          },
+          {
+            data: [12, 1, 4, 3, 8, 1, 3, 7]
+          },
+        ],
+      };
+    },
+
+    created() {
+      this.$vuetify.theme.dark = false;
+    },
+    computed: {
+      chartOptions() {
+        return {
+          chart: { type: this.modo },
+          series: [{
+            name: 'promedio',
+            data: this.arrayVencedora,
+            color: '#8BC34A'
+          }, {
+            name: 'tolerancia',
+            data: this.arrayTolerancia,
+            color: 'red'
+          }],
+          title: {
+            text: 'Gráfico Erms vs Iteración'
+          },
+          subtitle: {
+            text: 'Errores de cada iteración'
+          },
+          yAxis: {
+            title: {
+              text: 'Erms'
+            }
+          },
+          xAxis: {
+            title: {
+              text: 'Iteraciones'
+            }
+          },
+          legend: {
+            layout: 'vertical',
+            align: 'right',
+            verticalAlign: 'middle'
+          },
+          plotOptions: {
+            series: {
+              animation: true,
+              label: {
+                connectorAllowed: false
+              }
+            },
+            line: {
+              dataLabels: {
+                enabled: false
+              }
+            }
+          },
+          responsive: {
+            rules: [{
+              condition: {
+                maxWidth: 500
+              },
+              chartOptions: {
+                legend: {
+                  layout: 'horizontal',
+                  align: 'center',
+                  verticalAlign: 'bottom'
+                }
+              }
+            }]
+          }
+        }
+      },
+      currentTitle() {
+        switch (this.step) {
+          case 1:
+            return "Entradas";
+          case 2:
+            return "Configuración";
+          default:
+            return "Entrenamiento";
+        }
+      }
+    },
+    methods: {
+      changeFile(e) {
+        if (e !== null) {
+          this.files.push(e);
+          this.upload();
+        }
+      },
+      openFile() {
+        document.getElementById("inputFile").click();
+        const cuadrado = new rna(10, 10);
+        console.log(cuadrado.area); // 100
+      },
+      addFile(e) {
+        this.files = [];
+        this.loaded = true;
+        let droppedFiles = e.dataTransfer.files;
+        if (!droppedFiles) return;
+        // this tip, convert FileList to array, credit: https://www.smashingmagazine.com/2018/01/drag-drop-file-uploader-vanilla-js/
+        [...droppedFiles].forEach(f => {
+          this.files.push(f);
+        });
+        this.upload();
+      },
+      removeFile(file) {
+        this.files = this.files.filter(f => {
+          return f != file;
+        });
+
+        this.files = [];
+        this.headers = [];
+        this.items = [];
+        this.x = [];
+      },
+      upload() {
+        var TmpPath = URL.createObjectURL(this.files[0]);
+        console.log(TmpPath);
+        var entradas;
+        axios
+          .get(TmpPath)
+          .then(response => {
+            this.x = response.data.x;
+            this.loadTable();
+          })
+          .catch(error => console.log("Error: " + error));
+      },
+      loadTable() {
+        console.log(this.x);
+        var entradas = this.x;
+        const cabeceras = [];
+
+        this.m = entradas[0].length;
+        this.numeroPatrones = entradas.length;
+
+        for (let index = 0; index < entradas[0].length; index++) {
+          var letter = `"x${index + 1}"`;
+          const cad = `{"text":${letter}, "value":"x${index + 1}"}`;
+          cabeceras.push(JSON.parse(cad));
+        }
+        const cuerpo = [];
+
+        entradas.forEach(element => {
+          let cad = "{";
+          for (let index = 0; index < element.length; index++) {
+            cad += `"x${index + 1}":${element[index]}`;
+            if (index !== element.length - 1) {
+              cad += ",";
+            }
+          }
+          cad += "}";
+          const test = JSON.parse(cad);
+          cuerpo.push(test);
+        });
+
+        this.headers = cabeceras;
+        this.items = cuerpo;
+
+        console.log(this.headers);
+        console.log(this.items);
+      },
+      inicializarPesos() {
+        this.w = [];
+        this.itemsMatriz = [];
+        for (let i = 0; i < this.numeroNeuronas; i++) {
+          var obj = [];
+          let cad = "{";
+          for (let j = 0; j < this.x[0].length; j++) {
+            var rdn = Math.random() * (1 - -1) + -1;
+            console.log(rdn);
+            cad += `"x${j + 1}":${rdn}`;
+            if (j !== this.x[0].length - 1) {
+              cad += ",";
+            }
+            obj.push(rdn);
+          }
+          cad += "}";
+          console.log(cad);
+
+          this.itemsMatriz.push(JSON.parse(cad));
+          this.w.push(obj);
+        }
+        console.log(this.w);
+      },
+      validate() {
+        if (this.$refs.form.validate()) {
+          this.snackbar = true;
+        }
+      },
+      reset() {
+        this.$refs.form.reset();
+      },
+      resetValidation() {
+        this.$refs.form.resetValidation();
+      },
+      entrenar() {
+        //distancia euclidiana
+        let d = [];
+        //distancia vencedora
+        let dv = [];
+        //iteraciones
+
+        for (let ite = 0; ite < this.numeroIteraciones; ite++) {
+          //patrones
+          let sum_dv = 0;
+          for (let p = 0; p < this.numeroPatrones; p++) {
+            let suma = 0;
+
+            //calculo de la distancia euclidiana
+            for (let i = 0; i < this.numeroNeuronas; i++) {
+              for (let j = 0; j < this.m; j++) {
+                suma = (suma + (this.x[p][j] - this.w[j][i])) ^ 2;
+              }
+              d[i] = Math.sqrt(suma);
+            }
+            let pos_dv = 0;
+            dv[p] = d[0];
+            // hallar la vencedora
+            for (let i = 0; i < this.numeroNeuronas; i++) {
+              if (dv[p] > d[i]) {
+                pos_dv = i;
+                dv[p] = d[i];
+              }
+            }
+            console.log("dv[" + p + "]" + " = " + d[p]);
+            //acumula distancias vencedoras en cada patron
+            sum_dv = sum_dv + dv[p];
+            console.log("sum_dv = " + sum_dv);
+
+            switch (this.tipoCompetencia) {
+              case "dura":
+                //actualización de pesos COMPETENCIA DURA
+                for (let j = 0; j < this.m; j++) {
+                  this.w[j][pos_dv] = this.w[j][pos_dv] + this.rata * dv[p];
+                }
+                break;
+              case "blanda":
+                let dg = dv[p] + cv;
+                //actualización de pesos COMPETENCIA BLANDA
+                for (let i = 0; i < this.numeroNeuronas; i++) {
+                  if (d[i] < dg) {
+                    for (let j = 0; j < this.m; j++) {
+                      this.w[j][i] = this.w[j][i] + this.rata * dv[p];
+                    }
+                  }
+                }
+                break;
+            }
+          }
+
+          d_vencedora = sum_dv / this.numeroPatrones;
+          this.arrayVencedora.push(d_vencedora);
+          this.arrayIte.push(ite);
+          this.arrayTolerancia.push(this.tolerancia);
+
+          if (d_vencedora <= this.tolerancia) {
+            console.log("promedio iteración[" + ite + "]:  " + d_vencedora);
+            break;
+          } else {
+            console.log("promedio iteración[" + ite + "]:  " + d_vencedora);
+          }
+        }
+      },
+      simular() {
+        //distancia euclidiana
+        let d = [];
+        //distancia vencedora
+        let dv = [];
+        //iteraciones
+        for (let ite = 0; ite < this.numeroIteraciones; $ite++) {
+          //patrones
+          let sum_dv = 0;
+          for (let p = 0; p < this.numeroPatrones; p++) {
+            let suma = 0;
+
+            //calculo de la distancia euclidiana
+            for (let i = 0; i < this.numeroNeuronas; i++) {
+              for (let j = 0; j < m; j++) {
+                suma = (suma + (this.x[p][j] - this.w[j][i])) ^ 2;
+              }
+              d[i] = Math.sqrt(suma);
+            }
+            let pos_dv = 0;
+            dv[p] = d[0];
+
+            // hallar la vencedora
+            for (let i = 0; i < this.numeroNeuronas; i++) {
+              if (dv[p] > d[i]) {
+                pos_dv = i;
+                dv[p] = d[i];
+              }
+            }
+
+            //acumula distancias vencedoras en cada patron
+            sum_dv = sum_dv + dv[p];
+
+            switch (this.tipoCompetencia) {
+              case "dura":
+                //actualización de pesos COMPETENCIA DURA
+                for (let j = 0; j < this.m; j++) {
+                  this.w[j][pos_dv] = this.w[j][pos_dv] + this.rata * dv[p];
+                }
+                break;
+              case "blanda":
+                let dg = dv[p] + cv;
+                //actualización de pesos COMPETENCIA BLANDA
+                for (let i = 0; i < this.numeroNeuronas; i++) {
+                  if (d[i] < dg) {
+                    for (let j = 0; j < this.m; j++) {
+                      this.w[j][i] = this.w[j][i] + this.rata * dv[p];
+                    }
+                  }
+                }
+                break;
+            }
+          }
+
+          d_vencedora = sum_dv / this.numeroPatrones;
+          this.arrayVencedora.push(d_vencedora);
+          this.arrayIte.push(ite);
+
+          if (d_vencedora <= this.tolerancia) {
+            console.log("promedio iteración[" + ite + "]:  " + d_vencedora);
+            break;
+          } else {
+            console.log("promedio iteración[" + ite + "]:  " + d_vencedora);
+          }
+        }
+      }
+    }
+  });
+</script>
+  </body>
+</html>
